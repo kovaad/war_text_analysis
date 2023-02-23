@@ -54,24 +54,43 @@ final_df <- read_csv("data/final_df2.csv")
 
 final_df_2 <- read_csv("data/final_df2_v2.csv")
 
-t <- read_html(links[1])
+t <- read_html("http://magyarnemzet.hu/kulfold/2022/05/elkepeszto-videon-ahogy-oroszok-tengeralattjarorol-lonek-cirkaloraketakat-ukrajna-fele")
 
 t %>% html_nodes("p") %>% html_text()
+
+t %>% html_nodes(".info-line") %>% html_text()
+
+t %>% html_nodes(xpath = "//*[contains(concat( ' ',@class, ' ' ), concat( ' ','source', ' ' ))]") %>% html_text()
+
+t <- read_html("http://magyarnemzet.hu/belfold/2022/04/mar-tobb-mint-650-ezer-menekult-erkezett-magyarorszagra")
+
+t %>% html_nodes(".tag-list-item") %>% html_text()
+
+
 
 get_article_mn <- function(t_url) {
   
   t <- read_html(t_url)
   
+  source <- t %>% html_nodes(xpath = "//*[contains(concat( ' ',@class, ' ' ), concat( ' ','source', ' ' ))]") %>% html_text()
+  
   text <- t %>% html_nodes("p") %>% html_text()
   
   body <- paste0(text, sep=" ", collapse="") 
   
-  df <- data.frame('url' = t_url, 'body' = body)
+  tabs_raw <- str_remove(t %>% html_nodes(".tag-list-item") %>% html_text(), " ")
+  
+  tabs <- paste0(tabs_raw, sep=" ", collapse="") 
+  
+  df <- data.frame('url' = t_url, 'source' = source, 'body' = body, 'tabs' = tabs)
   
   return(df)
 }
 
 pblapply(links[1], get_article_mn)
+
+pblapply("https://magyarnemzet.hu/kulfold/2022/05/elkepeszto-videon-ahogy-oroszok-tengeralattjarorol-lonek-cirkaloraketakat-ukrajna-fele"
+, get_article_mn)
 
 links <- final_df_2$links
 
