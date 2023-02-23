@@ -56,21 +56,6 @@ write.csv(final_df,"data/final_df_all.csv", row.names = FALSE)
 
 final_df <- read_csv("data/final_df_all.csv")
 
-#final_df <- read_csv("data/final_df2.csv")
-
-#final_df_2 <- read_csv("data/final_df2_v2.csv")
-
-
-text <- t %>% html_nodes("p") 
-
-toremove <- text  %>% 
-  xml_find_all("//p[@dir='ltr']")
-
-xml_remove(toremove)
-
-text <- t %>% html_nodes("p") |>  html_text()
-
-body <- paste0(text, sep=" ", collapse="") 
 
 get_article_mn <- function(t_url) {
   
@@ -112,13 +97,6 @@ final_texts_mn <- rbindlist(list_of_texts)
 write.csv(final_texts_mn,"data/final_texts_mn_all.csv", row.names = FALSE)
 
 # CHECKPOINT
-
-final_texts_mn <- read_csv("data/final_texts_mn.csv")
-
-final_texts_mn_2 <- read_csv("data/final_texts_mn_v2.csv")
-
-
-
 final_texts_mn <- read_csv("data/final_texts_mn_all.csv")
 
 # Create dataframe --------------------------------------------------------
@@ -167,100 +145,29 @@ mn_df <- mn_df |> filter(!is.na(body))
 #save dataframe
 write.csv(mn_df,"data/mn_df_full.csv", row.names = FALSE)
 
-
-
-#get newly scraped data in a dataframe
-mn_df_2 <- left_join(final_df_2, final_texts_mn_2, by = c("links" = "url"))
-
-# create dates in desired format, throw out all text in the end, which no longer part of article
-mn_df_2 <- mn_df_2 |> 
-mutate(name = "magyar nemzet",
-       dates  = ymd(str_remove(dates, "[.][^.]+$")), 
-       body = ifelse(str_detect(body, "Borítókép"), stringr::str_extract(body, "^.*(?=(Borítókép))"), body))
-
-# throw out advertisements within text
-mn_df_2 <- mn_df_2 |> 
-  mutate(body = str_replace(body, "Ajánló.*?\\.", ""))
-
-#save dataframe
-write.csv(mn_df_2,"data/mn_df_2_test.csv", row.names = FALSE)
-
-
-# dealing with missing data -----------------------------------------------
-
-tocorrect_links <- mn_df_2[is.na(mn_df_2$body),]$links
-
-tocorrect_list_of_texts <- pblapply(tocorrect_links, get_article_mn)
-
-tocorrect_final_texts_mn <- rbindlist(tocorrect_list_of_texts)
-
-temp <- inner_join(mn_df_2, tocorrect_final_texts_mn, by = c("links" = "url"))
-
-
-mn_df_2$body <- ifelse(mn_df_2$links %in% temp$links, temp$body.y, mn_df_2$body)
-
-mn_df_2 <- mn_df_2 |> 
-  mutate(name = "magyar nemzet",
-         dates  = ymd(str_remove(dates, "[.][^.]+$")), 
-         body = ifelse(str_detect(body, "Borítókép"), stringr::str_extract(body, "^.*(?=(Borítókép))"), body))
-
-View(mn_df_2[is.na(mn_df_2$body),])
-
-flextable::flextable(mn_df_2 |> filter(titles == "Előre be nem jelentett látogatást tett Kijevben az amerikai házelnök"), cwidth = c(0.1,0.1,0.1,0.6,0.1))
-
-
-mn_df_2 |> filter(titles == "Belga liberális politikus: Vissza kell utasítanunk Zelenszkijt") |>
-  mutate(body = as.character(body)) |> 
-  select(body) #|> 
-  #str_detect( "Borítókép")
-  #stringr::str_extract("^.*(?=Borítókép)")
-
-mn_df_2 |> filter(titles == "Már több mint 650 ezer menekült érkezett Magyarországra") |>
-  #mutate(body = as.character(body)) |> 
-  select(body) #|> 
-#str_detect( "Borítókép")
-#stringr::str_extract("^.*(?=Borítókép)")
-
-mn_df_2 |> filter(titles == "Már több mint 650 ezer menekült érkezett Magyarországra") |>
-  #mutate(body = as.character(body)) |> 
-  select(body)
-
-write.csv(mn_df_2,"data/mn_df_2_test.csv", row.names = FALSE)
-
-
-# drop the last two rows, already present in mn_df
-mn_df_2 <- mn_df_2[-c(nrow(mn_df_2)-1, nrow(mn_df_2)),]
-
-# filter on those rows of the mn_df_2 dataframe where the body column has NA in R
-
-View(mn_df_2[is.na(mn_df_2$body),])
-
-write.csv(mn_df_2,"data/mn_df_2.csv", row.names = FALSE)
-
 # CHECKPOINT
-
-mn_df <- read_csv("data/mn_df.csv")
-
-mn_df_2 <- read_csv("data/mn_df_2.csv")
-
-# merge the two tibbles
-mn_df_all <- rbind(mn_df_2, mn_df)
-
-write.csv(mn_df_all,"data/mn_df_all.csv", row.names = FALSE)
-
-# CHECKPOINT
-
-mn_df_all <- read_csv("data/mn_df_all.csv")
+mn_df <- read_csv("data/mn_df_full.csv")
 
 #filter so that we have the same number of articles before and after 2022-04-3
 
-mn_df_final <- mn_df_all %>%
+mn_df <- mn_df |> 
+  mutate(
+    label = ifelse(dates < ymd("2022-4-3"), "előtte", "utána") 
+  )
+
+nrow( mn_df |> 
+          filter(label == "előtte"))
+#there are 1035 articles before 4th April, so we need 2070 in total
+
+mn_df <- mn_df %>%
   tail(2070)
 
-write.csv(mn_df_final,"data/mn_df_final.csv", row.names = FALSE)
+nrow( mn_df |> 
+        filter(label == "utána"))
 
+write.csv(mn_df,"data/mn_df_all_final.csv", row.names = FALSE)
 
-mn_df_final <- read_csv("data/mn_df_final.csv")
+mn_df_final <- read_csv("data/mn_df_all_final.csv")
 
 
 
