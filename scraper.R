@@ -101,21 +101,27 @@ mn_df <- mn_df |>
 mn_df <- mn_df |> 
   mutate(body = str_replace(body, "Ajánló.*?\\.", ""))
 
+#save dataframe
 write.csv(mn_df,"data/mn_df.csv", row.names = FALSE)
 
+#get newly scraped data in a dataframe
 mn_df_2 <- left_join(final_df_2, final_texts_mn_2, by = c("links" = "url"))
 
-#adjust this code snippet, so that it only restricts the "body" to the string until "Borítókép" if it finds it in the text, otherwise leave the body intact: mn_df_2 <- mn_df_2 |> 
-  
+# create dates in desired format, throw out all text in the end, which no longer part of article
 mn_df_2 <- mn_df_2 |> 
 mutate(name = "magyar nemzet",
        dates  = ymd(str_remove(dates, "[.][^.]+$")), 
        body = ifelse(str_detect(body, "Borítókép"), stringr::str_extract(body, "^.*(?=(Borítókép))"), body))
 
-#write R code using the tidyverse that takes the tibble mn_df_2 and in the "body" string column if the value matches "Ajánló", it takes the characters from the beginning of "Ajánló" until the first "." and removes it from the string: mn_df_2 <- mn_df_2 |> 
+# throw out advertisements within text
 mn_df_2 <- mn_df_2 |> 
   mutate(body = str_replace(body, "Ajánló.*?\\.", ""))
 
+#save dataframe
+write.csv(mn_df_2,"data/mn_df_2_test.csv", row.names = FALSE)
+
+
+# dealing with missing data -----------------------------------------------
 
 tocorrect_links <- mn_df_2[is.na(mn_df_2$body),]$links
 
