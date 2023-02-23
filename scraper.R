@@ -17,7 +17,8 @@ pacman::p_load(rvest, data.table, xml2,kableExtra, tidyverse, glue, lubridate, p
 require(devtools)
 install_github("MichelNivard/gptstudio")
 
-Sys.setenv(OPENAI_API_KEY = "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")
+# add key
+#Sys.setenv(OPENAI_API_KEY = "")
 
 
 # magyar nemzet -----------------------------------------------------------
