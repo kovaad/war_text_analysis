@@ -11,7 +11,7 @@ rm(list = ls())
 if (!require("pacman")) {
   install.packages("pacman")
 }
-pacman::p_load(rvest, data.table, xml2,kableExtra, tidyverse, glue, lubridate, pbapply, stringr)
+pacman::p_load(rvest, data.table, xml2,kableExtra, tidyverse, glue, lubridate, pbapply, stringr, flextable)
 
 #set up chatgpt within R
 require(devtools)
@@ -56,17 +56,14 @@ final_df_2 <- read_csv("data/final_df2_v2.csv")
 
 t <- read_html("http://magyarnemzet.hu/kulfold/2022/05/elkepeszto-videon-ahogy-oroszok-tengeralattjarorol-lonek-cirkaloraketakat-ukrajna-fele")
 
-t %>% html_nodes("p") %>% html_text()
+texts <- t %>% html_nodes("p") 
 
-t %>% html_nodes(".info-line") %>% html_text()
+toremove <- texts  %>% 
+  xml_find_all("//p[@dir='ltr']")
 
-t %>% html_nodes(xpath = "//*[contains(concat( ' ',@class, ' ' ), concat( ' ','source', ' ' ))]") %>% html_text()
+xml_remove(toremove)
 
-t <- read_html("http://magyarnemzet.hu/belfold/2022/04/mar-tobb-mint-650-ezer-menekult-erkezett-magyarorszagra")
-
-t %>% html_nodes(".tag-list-item") %>% html_text()
-
-
+texts <- t %>% html_nodes("p") |>  html_text()
 
 get_article_mn <- function(t_url) {
   
@@ -74,7 +71,23 @@ get_article_mn <- function(t_url) {
   
   source <- t %>% html_nodes(xpath = "//*[contains(concat( ' ',@class, ' ' ), concat( ' ','source', ' ' ))]") %>% html_text()
   
-  text <- t %>% html_nodes("p") %>% html_text()
+  text <- t %>% html_nodes("p") #%>% html_text()
+  
+  toremove <- texts  %>% 
+    xml_find_all("//p[@dir='ltr']")
+  
+  xml_remove(toremove)
+  
+  text <- t %>% html_nodes("p") |>  html_text()
+  
+  #do not get twitter tweets
+  # xpath = "//*[(@id = 'twitter-widget-0')]"
+  
+  #find children nodes to exclude
+  toremove <- t %>% html_nodes(xpath = "//*[(@id = 'twitter-widget-0')]")
+  
+  #remove nodes
+  xml_remove(toremove)
   
   body <- paste0(text, sep=" ", collapse="") 
   
@@ -161,6 +174,8 @@ mn_df_2 <- mn_df_2 |>
 
 View(mn_df_2[is.na(mn_df_2$body),])
 
+flextable::flextable(mn_df_2 |> filter(titles == "Előre be nem jelentett látogatást tett Kijevben az amerikai házelnök"), cwidth = c(0.1,0.1,0.1,0.6,0.1))
+
 
 mn_df_2 |> filter(titles == "Belga liberális politikus: Vissza kell utasítanunk Zelenszkijt") |>
   mutate(body = as.character(body)) |> 
@@ -177,8 +192,6 @@ mn_df_2 |> filter(titles == "Már több mint 650 ezer menekült érkezett Magyar
 mn_df_2 |> filter(titles == "Már több mint 650 ezer menekült érkezett Magyarországra") |>
   #mutate(body = as.character(body)) |> 
   select(body)
-
-
 
 write.csv(mn_df_2,"data/mn_df_2_test.csv", row.names = FALSE)
 
