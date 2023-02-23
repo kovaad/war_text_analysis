@@ -13,6 +13,13 @@ if (!require("pacman")) {
 }
 pacman::p_load(rvest, data.table, xml2,kableExtra, tidyverse, glue, lubridate, pbapply, stringr)
 
+#set up chatgpt within R
+require(devtools)
+install_github("MichelNivard/gptstudio")
+
+Sys.setenv(OPENAI_API_KEY = "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")
+
+
 # magyar nemzet -----------------------------------------------------------
 
 get_one_page_mn <- function(t_url) {
@@ -84,21 +91,30 @@ final_texts_mn_2 <- read_csv("data/final_texts_mn_v2.csv")
 
 mn_df <- left_join(final_df, final_texts_mn, by = c("links" = "url"))
 
+# create dates in desired format, throw out all text in the end, which no longer part of article
 mn_df <- mn_df |> 
   mutate(name = "magyar nemzet",
     dates  = ymd(str_remove(dates, "[.][^.]+$")), 
     body = stringr::str_extract(body, "^.*(?=(Borítókép))"))
+
+# throw out advertisements within text
+mn_df <- mn_df |> 
+  mutate(body = str_replace(body, "Ajánló.*?\\.", ""))
 
 write.csv(mn_df,"data/mn_df.csv", row.names = FALSE)
 
 mn_df_2 <- left_join(final_df_2, final_texts_mn_2, by = c("links" = "url"))
 
 #adjust this code snippet, so that it only restricts the "body" to the string until "Borítókép" if it finds it in the text, otherwise leave the body intact: mn_df_2 <- mn_df_2 |> 
-
+  
 mn_df_2 <- mn_df_2 |> 
 mutate(name = "magyar nemzet",
        dates  = ymd(str_remove(dates, "[.][^.]+$")), 
        body = ifelse(str_detect(body, "Borítókép"), stringr::str_extract(body, "^.*(?=(Borítókép))"), body))
+
+#write R code using the tidyverse that takes the tibble mn_df_2 and in the "body" string column if the value matches "Ajánló", it takes the characters from the beginning of "Ajánló" until the first "." and removes it from the string: mn_df_2 <- mn_df_2 |> 
+mn_df_2 <- mn_df_2 |> 
+  mutate(body = str_replace(body, "Ajánló.*?\\.", ""))
 
 
 tocorrect_links <- mn_df_2[is.na(mn_df_2$body),]$links
@@ -140,24 +156,11 @@ mn_df_2 |> filter(titles == "Már több mint 650 ezer menekült érkezett Magyar
 
 write.csv(mn_df_2,"data/mn_df_2_test.csv", row.names = FALSE)
 
-#write R code that extracts all characters at the beginning of a character sequence up to the characters "Borítókép" using the tidyverse
-string <- "Könyv Borítókép"
-
-string %>%
-  str_extract("^.*?(?=Borítókép)")
-
-#what does this regex do: "^.*(?=(Borítókép))"
-#This regex matches any characters at the beginning of a string up to the characters "Borítókép".
-
-#This code snippet takes the data frame mn_df_2 and creates a new column called "name" with the value "magyar nemzet". It then creates a new column called "dates" which takes the values from the "dates" column and removes any characters after a period. Finally, it creates a new column called "body" which extracts the text from the "body" column up to the string "Borítókép".
-
-# pretend to be an R data scientist, write code to drop the last two rows of my dataframe, but keep the rest of the dataframe and assign it back
 
 # drop the last two rows, already present in mn_df
 mn_df_2 <- mn_df_2[-c(nrow(mn_df_2)-1, nrow(mn_df_2)),]
 
 # filter on those rows of the mn_df_2 dataframe where the body column has NA in R
-
 
 View(mn_df_2[is.na(mn_df_2$body),])
 
