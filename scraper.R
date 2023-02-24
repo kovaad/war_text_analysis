@@ -444,7 +444,9 @@ get_one_page_ps <- function(t_url) {
   return(df)
 }
 
-links <- paste0('http://pestisracok.hu/tag/orosz-ukran-haboru/page/', 1:53)
+links <- paste0('http://pestisracok.hu/tag/orosz-ukran-haboru/page/', 2:53)
+
+t <- read_html("https://pestisracok.hu/tag/orosz-ukran-haboru/page/3")
 
 list_of_dfs4 <- pblapply(links, get_one_page_ps)
 
