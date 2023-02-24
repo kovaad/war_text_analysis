@@ -53,7 +53,6 @@ to_filter[to_filter > 0]
 write.csv(final_df,"data/final_df_all.csv", row.names = FALSE)
 
 #CHECKPOINT
-
 final_df <- read_csv("data/final_df_all.csv")
 
 
@@ -128,16 +127,16 @@ to_filter <- sapply(mn_df, function(x) sum(is.na(x)))
 to_filter[to_filter > 0]
 
 # show the row with the missing value in R tibble
-View(mn_df |> filter(is.na(body)) |> select("links"))
+#View(mn_df |> filter(is.na(body)) |> select("links"))
 
-mn_df <- left_join(final_df, final_texts_mn, by = c("links" = "url"))
+#mn_df <- left_join(final_df, final_texts_mn, by = c("links" = "url"))
 
-flextable::flextable(mn_df |> 
-                       filter(titles == "A szankció visszaüt"), cwidth = c(0.1,0.1,0.1,0.6,0.1))
+#flextable::flextable(mn_df |> 
+#                       filter(titles == "A szankció visszaüt"), cwidth = c(0.1,0.1,0.1,0.6,0.1))
 
-flextable::flextable(mn_df |> 
-                       filter(titles == "Az EU elfogadta az Oroszországot sújtó célzott szankciókat"),
-                     cwidth = c(0.1,0.1,0.1,0.6,0.1))
+#flextable::flextable(mn_df |> 
+#                       filter(titles == "Az EU elfogadta az Oroszországot sújtó célzott szankciókat"),
+#                     cwidth = c(0.1,0.1,0.1,0.6,0.1))
 
 #drop NAs
 mn_df <- mn_df |> filter(!is.na(body))
@@ -158,7 +157,6 @@ mn_df <- mn_df |>
 nrow( mn_df |> 
           filter(label == "előtte"))
 #there are 1035 articles before 4th April, so we need 2070 in total
-
 mn_df <- mn_df %>%
   tail(2070)
 
@@ -167,9 +165,8 @@ nrow( mn_df |>
 
 write.csv(mn_df,"data/mn_df_all_final.csv", row.names = FALSE)
 
+# CHECKPOINT
 mn_df_final <- read_csv("data/mn_df_all_final.csv")
-
-
 
 # mandiner ----------------------------------------------------------------
 
@@ -192,20 +189,63 @@ get_one_page_mr <- function(t_url) {
 
 df <- get_one_page_mr('http://mandiner.hu/tag/orosz_ukran_haboru')
 
-offset <- seq(0,522,18)
+offset <- seq(0,612,18)
 links <- glue('http://mandiner.hu/tag/orosz_ukran_haboru/?offset={offset}&limit=18')
 
 list_of_dfs2 <- pblapply(links, get_one_page_mr)
 
 final_df_mr <- rbindlist(list_of_dfs2)
 
+t <- read_html("https://mandiner.hu/cikk/20230223_europai_tanacs_europai_unio_tagallam_oroszorszag_orosz_ukran_haboru_kulfold")
+
+#using rvest write R code that gets all paragraphs and divs with the class "keretes" using one pipe
+
+t %>% html_nodes('.text p, .keretes') %>% html_text()
+
+text <- t %>% html_nodes(".text p") %>% html_text()
+
+body <- paste0(text, sep=" ", collapse="") 
+
+str_remove(t %>% html_nodes(".taglist a") %>% html_text(), " ")
+
+t <- read_html("https://mandiner.hu/cikk/20230222_ukrajna_kreminna_haboru_orosz_ukran_haboru_harckocsi_video")
+
+text <- t %>% html_nodes(".text p, .keretes") 
+
+toremove <- text  %>% 
+  xml_find_all("//p[@dir='ltr']")
+
+xml_remove(toremove)
+
+text <- t %>% html_nodes(".text p") |>  html_text()
+
+t <- read_html("https://mandiner.hu/cikk/20230212_jens_stoltenberg_nato_orosz_ukran_haboru_kulfold")
+text <-  t %>% html_nodes(".text p")
+toremove <- text  %>% 
+  xml_find_all("//p[@dir='ltr']")
+xml_remove(toremove)
+text <- t %>% html_nodes(".text p, .keretes") |>  html_text()
+body <- paste0(text, sep=" ", collapse="") 
+ifelse(str_detect(body, "Nyitókép"), stringr::str_extract(body, "^.*(?=(Nyitókép))"), body)
+
 get_article_mr <- function(t_url) {
   
   t <- read_html(t_url)
   
-  text <- t %>% html_nodes(".text p") %>% html_text()
+  text <- t %>% html_nodes('.text p, .keretes') 
+  
+  toremove <- text  %>% 
+    xml_find_all("//p[@dir='ltr']")
+  
+  xml_remove(toremove)
+  
+  text <- t %>% html_nodes(".text p, .keretes") |>  html_text()
   
   body <- paste0(text, sep=" ", collapse="") 
+  
+  tabs_raw <- str_remove(t %>% html_nodes(".taglist a") %>% html_text(), " ")
+  
+  tabs <- paste0(tabs_raw, sep=" ", collapse="") 
   
   df <- data.frame('url' = t_url, 'body' = body)
   
@@ -218,13 +258,65 @@ list_of_texts_mr <- pblapply(links, get_article_mr)
 
 final_texts_mr <- rbindlist(list_of_texts_mr)
 
-write.csv(final_texts_mr,"data/final_texts_mr.csv", row.names = FALSE)
+write.csv(final_texts_mr,"data/final_texts_mr_all.csv", row.names = FALSE)
+
+#CHECKPOINT
+final_texts_mr <- read_csv("data/final_texts_mr_all.csv")
 
 mr_df <- left_join(final_df_mr, final_texts_mr, by = c("links" = "url"))
 
+#filter out pic description, but careful not to lose too much data either
+
+nrow(mr_df |> filter(str_detect(body, "Nyitókép") == T))
+
+nrow(mr_df |> filter(str_detect(body, "A nyitóképen") == T))
+
+nrow(mr_df |> filter(str_detect(body, "A nyitókép illusztráció") == T))
+
+nrow(mr_df |> filter(str_detect(body, "Fotó") == T))
+
+nrow(mr_df |> filter(str_detect(body, "Címlapfotó") == T))
+
+nrow(mr_df |> filter(str_detect(body, "Borítókép") == T))
+
+nrow(mr_df |> filter(str_detect(body, "Nyitófotó") == T))
+
+nrow(mr_df |> filter(str_detect(body, "(MTI)") == T))
+
 mr_df <- mr_df |> 
   mutate(name = "mandiner",
-    dates = parse_date(gsub('\\.','',str_remove(dates, "[.][^.]+$")), "%Y %B %d", locale = locale("hu")))
+    dates = parse_date(gsub('\\.','',str_remove(dates, "[.][^.]+$")), "%Y %B %d", locale = locale("hu")),
+    body = ifelse(str_detect(body, "Nyitókép"), stringr::str_extract(body, "^.*(?=(Nyitókép))"), body))
+
+mr_df <- mr_df |> 
+  mutate(body = ifelse(str_detect(body, "A nyitóképen"), stringr::str_extract(body, "^.*(?=(A nyitóképen))"), body))
+
+#check for any possible na values in tibble 
+to_filter <- sapply(mr_df, function(x) sum(is.na(x)))
+to_filter[to_filter > 0]
+
+View(mr_df |> filter(is.na(body)) |> select("links"))
+
+mr_df <- mr_df |> 
+  mutate(body = ifelse(str_detect(body, "Fotó"), stringr::str_extract(body, "^.*(?=(Fotó))"), body))
+
+mr_df <- mr_df |> 
+  mutate(body = ifelse(str_detect(body, "Címlapfotó"), stringr::str_extract(body, "^.*(?=(Címlapfotó))"), body))
+
+mr_df <- mr_df |> 
+  mutate(body = ifelse(str_detect(body, "Borítókép"), stringr::str_extract(body, "^.*(?=(Borítókép))"), body))
+
+mr_df <- mr_df |> 
+  mutate(body = ifelse(str_detect(body, "(MTI)"), stringr::str_extract(body, "^.*(?=((MTI)))"), body))
+
+mr_df <- mr_df |> 
+  mutate(body = ifelse(str_detect(body, "Nyitófotó"), stringr::str_extract(body, "^.*(?=(Nyitófotó))"), body))
+
+mr_df <- mr_df |> 
+  mutate(body = ifelse(str_detect(body, "A nyitókép illusztráció"), stringr::str_extract(body, "^.*(?=(A nyitókép illusztráció))"), body))
+
+
+
 
 write.csv(mr_df,"data/mr_df.csv", row.names = FALSE)
 
