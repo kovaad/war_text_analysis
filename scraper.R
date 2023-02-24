@@ -18,7 +18,7 @@ require(devtools)
 install_github("MichelNivard/gptstudio")
 
 # add key
-#Sys.setenv(OPENAI_API_KEY = "")
+Sys.setenv(OPENAI_API_KEY = "")
 
 
 # magyar nemzet -----------------------------------------------------------
@@ -189,12 +189,17 @@ get_one_page_mr <- function(t_url) {
 
 df <- get_one_page_mr('http://mandiner.hu/tag/orosz_ukran_haboru')
 
-offset <- seq(0,612,18)
+offset <- seq(0,648,18)
 links <- glue('http://mandiner.hu/tag/orosz_ukran_haboru/?offset={offset}&limit=18')
 
 list_of_dfs2 <- pblapply(links, get_one_page_mr)
 
 final_df_mr <- rbindlist(list_of_dfs2)
+
+write.csv(final_df_mr,"data/final_df_mr.csv", row.names = FALSE)
+
+#CHECKPOINT
+final_df_mr <- read_csv("data/final_df_mr.csv")
 
 t <- read_html("https://mandiner.hu/cikk/20230223_europai_tanacs_europai_unio_tagallam_oroszorszag_orosz_ukran_haboru_kulfold")
 
@@ -226,6 +231,15 @@ toremove <- text  %>%
 xml_remove(toremove)
 text <- t %>% html_nodes(".text p, .keretes") |>  html_text()
 body <- paste0(text, sep=" ", collapse="") 
+
+#write R code that takes the character chain and keeps only characters up to the word "Nyitókép" wherever it first appears in the text using str_extract
+
+str_extract(text, )
+ifelse(str_detect(body, "Nyitókép"), stringr::str_extract(body, ".*Nyitókép"), body)
+
+
+substring(body, 1, regexpr("Nyitókép", body)[1]-1)
+
 ifelse(str_detect(body, "Nyitókép"), stringr::str_extract(body, "^.*(?=(Nyitókép))"), body)
 
 get_article_mr <- function(t_url) {
@@ -258,12 +272,35 @@ list_of_texts_mr <- pblapply(links, get_article_mr)
 
 final_texts_mr <- rbindlist(list_of_texts_mr)
 
-write.csv(final_texts_mr,"data/final_texts_mr_all.csv", row.names = FALSE)
+write.csv(final_texts_mr,"data/final_texts_mr_all_full.csv", row.names = FALSE)
 
 #CHECKPOINT
-final_texts_mr <- read_csv("data/final_texts_mr_all.csv")
+final_texts_mr <- read_csv("data/final_texts_mr_all_full.csv")
 
 mr_df <- left_join(final_df_mr, final_texts_mr, by = c("links" = "url"))
+
+mr_df <- mr_df |> 
+  mutate(name = "mandiner",
+         dates = parse_date(gsub('\\.','',str_remove(dates, "[.][^.]+$")), "%Y %B %d", locale = locale("hu")))
+
+#filter so that we have the same number of articles before and after 2022-04-3
+
+mr_df <- mr_df |> 
+  mutate(
+    label = ifelse(dates < ymd("2022-4-3"), "előtte", "utána") 
+  )
+
+nrow( mr_df |> 
+        filter(label == "előtte"))
+
+nrow( mr_df |> 
+        filter(label == "utána"))
+
+
+#there are 1035 articles before 4th April, so we need 2070 in total
+mn_df <- mn_df %>%
+  tail(2070)
+
 
 #filter out pic description, but careful not to lose too much data either
 
@@ -281,12 +318,27 @@ nrow(mr_df |> filter(str_detect(body, "Borítókép") == T))
 
 nrow(mr_df |> filter(str_detect(body, "Nyitófotó") == T))
 
-nrow(mr_df |> filter(str_detect(body, "(MTI)") == T))
+nrow(mr_df |> filter(str_detect(body, "(MTI)") == T) |> select("body"))
+
+#mr_df <- mr_df |> 
+#  mutate(name = "mandiner",
+#         dates = parse_date(gsub('\\.','',str_remove(dates, "[.][^.]+$")), "%Y %B %d", locale = locale("hu")),
+#         body = ifelse(str_detect(body, "Nyitókép"), stringr::str_extract(body, ".*Nyitókép"), body))
+
+# adjust the R code, I want to see only the last 10 characters in each cell mr_df |> filter(str_detect(body, "(MTI)") == T) |> select("body")
+# adjusted R code
+mr_df |> filter(str_detect(body, "(MTI)") == T) |> select("body") 
 
 mr_df <- mr_df |> 
   mutate(name = "mandiner",
     dates = parse_date(gsub('\\.','',str_remove(dates, "[.][^.]+$")), "%Y %B %d", locale = locale("hu")),
     body = ifelse(str_detect(body, "Nyitókép"), stringr::str_extract(body, "^.*(?=(Nyitókép))"), body))
+    #body = ifelse(str_detect(body, "Nyitókép"),  substring(body, 1, regexpr("Nyitókép", body)[1]-1), body))
+
+mr_df <- mr_df |> 
+  mutate(body = ifelse(str_detect(body, "(MTI)"), stringr::str_extract(body, "^.*(?=((MTI)))"), body))
+
+
 
 mr_df <- mr_df |> 
   mutate(body = ifelse(str_detect(body, "A nyitóképen"), stringr::str_extract(body, "^.*(?=(A nyitóképen))"), body))
@@ -306,8 +358,7 @@ mr_df <- mr_df |>
 mr_df <- mr_df |> 
   mutate(body = ifelse(str_detect(body, "Borítókép"), stringr::str_extract(body, "^.*(?=(Borítókép))"), body))
 
-mr_df <- mr_df |> 
-  mutate(body = ifelse(str_detect(body, "(MTI)"), stringr::str_extract(body, "^.*(?=((MTI)))"), body))
+
 
 mr_df <- mr_df |> 
   mutate(body = ifelse(str_detect(body, "Nyitófotó"), stringr::str_extract(body, "^.*(?=(Nyitófotó))"), body))
@@ -392,6 +443,10 @@ get_one_page_ps <- function(t_url) {
   
   return(df)
 }
+
+links <- paste0('http://pestisracok.hu/tag/orosz-ukran-haboru/page/', 1:53)
+
+list_of_dfs4 <- pblapply(links, get_one_page_ps)
 
 links <- paste0('http://pestisracok.hu/tag/ukrajna/page/', 1:3)
 
