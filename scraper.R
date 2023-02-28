@@ -110,7 +110,7 @@ to_filter[to_filter > 0]
 filter(mn_df, is.na(tabs))
 
 #replace the NA value with "" in tibble
-mn_df[is.na(mn_df)] <- ""
+mn_df[is.na(mn_df)] <- "HáborúUkrajnában"
 
 # create dates in desired format, throw out all text in the end, which no longer part of article
 mn_df <- mn_df |> 
@@ -118,9 +118,15 @@ mn_df <- mn_df |>
          dates  = ymd(str_remove(dates, "[.][^.]+$")), 
          body = ifelse(str_detect(body, "Borítókép"), stringr::str_extract(body, "^.*(?=(Borítókép))"), body))
 
-# throw out advertisements within text
-mn_df <- mn_df |> 
-  mutate(body = str_replace(body, "Ajánló.*?\\.", ""))
+#throw out advertisements the above code until there are not a significant number of ajánló's left
+
+#write R code that replaces in the body column of my tibble the string Ajánló up until the first . ? or ! using tidyverse
+  
+while (sum(grepl("Ajánló", mn_df$body)) > 0) {
+  mn_df <- mn_df |> 
+    #mutate(body = str_replace(body, "Ajánló.*?\\.", ""))
+    mutate(body = str_replace(body, "Ajánló.*[.?!]", ""))
+}
 
 #check for any possible na values in tibble 
 to_filter <- sapply(mn_df, function(x) sum(is.na(x)))
@@ -147,24 +153,30 @@ write.csv(mn_df,"data/mn_df_full.csv", row.names = FALSE)
 # CHECKPOINT
 mn_df <- read_csv("data/mn_df_full.csv")
 
+
 #filter so that we have the same number of articles before and after 2022-04-3
 
 mn_df <- mn_df |> 
   mutate(
-    label = ifelse(dates < ymd("2022-4-3"), "előtte", "utána") 
+    label = ifelse(dates < ymd("2022-4-3"), "before", "after") 
   )
 
 nrow( mn_df |> 
-          filter(label == "előtte"))
+          filter(label == "before"))
 #there are 1035 articles before 4th April, so we need 2070 in total
 mn_df <- mn_df %>%
   tail(2070)
 
 nrow( mn_df |> 
-        filter(label == "utána"))
+        filter(label == "after"))
 
-write.csv(mn_df,"data/mn_df_all_final.csv", row.names = FALSE)
+write.csv(mn_df,"data/mn_df_all_final_version.csv", row.names = FALSE)
 
 # CHECKPOINT
 mn_df_final <- read_csv("data/mn_df_all_final.csv")
+
+mn_df_final |> filter(is.na(body))
+
+to_filter <- sapply(mn_df_final, function(x) sum(is.na(x)))
+to_filter[to_filter > 0]
 
