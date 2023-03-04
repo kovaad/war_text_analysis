@@ -292,8 +292,8 @@ result_keyness <- dfm_grouped %>%
 
 #plot
 result_keyness %>% 
-  quanteda.textplots::textplot_keyness(color = c("#00BFC4", "#F8766D")) +
-  xlim(c(-200, 200)) +
+  quanteda.textplots::textplot_keyness(color = c("#00BFC4", "#F8766D"), n=8) +
+  xlim(c(-130, 130)) +
   theme(legend.position = c(0.9,0.1)) 
 
 # keyword in context ------------------------------------------------------
@@ -379,30 +379,31 @@ df_sent <- df_sent %>%
 #helper tibble for arrows
 arrows <- 
   tibble(
-    x1 = c(ymd("2022-2-3"), ymd("2022-4-23")),
-    x2 =  c(ymd("2022-2-24"),ymd("2022-4-3")),
-    y1 = c(0.03, 0.03), 
-    y2 = c(0.03, 0.03)
+    x1 = c(ymd("2022-2-25"), ymd("2022-4-23")),
+    x2 =  c(ymd("2022-3-15"),ymd("2022-4-3")),
+    y1 = c(0.02, 0.017), 
+    y2 = c(0.016, 0.017)
   )
 
 #plot
 ggplot(df_sent, aes(dates, net_daily_normalized)) +
   geom_line() +
   labs(
-    y = "Szentiment",
+    y = "Sentiment score",
     x = NULL
   ) + 
+  geom_smooth(method = loess, se = T) +
   geom_vline(xintercept=ymd("2022-2-24"), linetype="dashed", 
              color = "red", size=1) + 
   geom_vline(xintercept=ymd("2022-4-3"), linetype="dashed", 
              color = "red", size=1) +
-  ggplot2::annotate("text", x = ymd("2022-2-1"), y = 0.027, label = "Oroszország megtámadja \n Ukrajnát") +
-  ggplot2::annotate("text", x = ymd("2022-4-23"), y = 0.033, label = "Választások/\nBucsai mészárlás") +
+  ggplot2::annotate("text", x = ymd("2022-3-15"), y = 0.014, label = "Russian invasion of \n Ukraine") +
+  ggplot2::annotate("text", x = ymd("2022-4-23"), y = 0.02, label = "Elections/\nBucha massacre") +
   geom_curve(
     data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
     arrow = arrow(length = unit(0.08, "inch")), size = 0.5,
-    color = "gray20", curvature = -0.3) +
-  theme_adam()
+    color = "gray20", curvature = -0.3) #+
+  #theme_adam()
 
 
 # word embeddings ---------------------------------------------------------
@@ -485,27 +486,29 @@ after_embedding_df <- as.data.frame(after_pca$x[,c(1,2)]) %>%
   tibble::rownames_to_column(var = "words")
 
 #create a function that plots the word embeddings of selected keywords
-embedding_plot <- function(data, keywords) {
+embedding_plot <- function(data, keywords, breaks_x, breaks_y) {
   data %>% 
     filter(words %in% keywords) %>% 
     ggplot(aes(PC1, PC2, label = words)) +
     labs(
-      x = "Első dimenzió",
-      y = "Második dimenzió"
+      x = "First dimension",
+      y = "Second dimension"
     ) +
-    geom_text() +
-    xlim(0,7) +
-    ylim(-2, 2.5)
+    geom_text()+ 
+    scale_x_continuous(expand = expansion(add = 1), 
+                       breaks = breaks_x) +
+    scale_y_continuous(expand = expansion(add = 1), 
+                       breaks = breaks_y)
 }
 
 #create character vector of selected words
-words_selected <- c("menekült",'segítség', 'humanitárius', 'háború', 'zelenszkij','orbán', 'katonai', 'márki-zay', 'putyin') 
+words_selected <- c("menekült", 'humanitárius', 'háború', 'zelenszkij','orbán', 'katonai', 'márki-zay', 'putyin') 
 
 #create embedding plot from before elections articles
-embedding_plot(data = before_embedding_df, keywords = words_selected) + theme_adam()
+embedding_plot(data = before_embedding_df, keywords = words_selected, breaks_x = seq(-8, 5, 2), breaks_y = seq(-8, 5, 2)) #+ theme_adam()
 
 #create embedding plot from after elections articles
-embedding_plot(data = after_embedding_df, keywords = words_selected) + theme_adam()
+embedding_plot(data = after_embedding_df, keywords = words_selected, breaks_x = seq(-2, 8, 1), breaks_y = seq(-1, 1, 1))# + theme_adam()
 
 # topic modelling ---------------------------------------------------------
 
