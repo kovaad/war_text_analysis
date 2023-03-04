@@ -121,12 +121,19 @@ mn_df <- mn_df |>
 #throw out advertisements the above code until there are not a significant number of ajánló's left
 
 #write R code that replaces in the body column of my tibble the string Ajánló up until the first . ? or ! using tidyverse
-  
-while (sum(grepl("Ajánló", mn_df$body)) > 0) {
-  mn_df <- mn_df |> 
-    #mutate(body = str_replace(body, "Ajánló.*?\\.", ""))
-    mutate(body = str_replace(body, "Ajánló.*[.?!]", ""))
-}
+mn_df <- mn_df |> 
+  mutate(body = ifelse(str_detect(body, "Ajánló"), str_replace_all(body, "Ajánló.*[.?!]", ""), body))
+
+#while (sum(grepl("Ajánló", mn_df$body)) > 0) {
+#  mn_df <- mn_df |> 
+#    mutate(body = ifelse(str_detect(body, "Ajánló"), str_replace(body, "Ajánló.*[.?!]", ""), body))
+#}
+
+sum(grepl("Ajánló", mn_df$body))
+
+sum(grepl("pic.twitter.com", mn_df$body))
+
+View(mn_df |> filter(str_detect(body, "pic.twitter.com")))
 
 #check for any possible na values in tibble 
 to_filter <- sapply(mn_df, function(x) sum(is.na(x)))
