@@ -137,8 +137,8 @@ arrows <-
   tibble(
     x1 = c(ymd("2022-3-15"), ymd("2022-4-19")),
     x2 =  c(ymd("2022-2-24"),ymd("2022-4-3")),
-    y1 = c(650, 220), 
-    y2 = c(700, 250)
+    y1 = c(550, 470), 
+    y2 = c(600, 500)
   )
 
 ggplot(overtime, aes(dates, avg_tokens)) +
@@ -152,8 +152,8 @@ ggplot(overtime, aes(dates, avg_tokens)) +
              color = "red", size=1) + 
   geom_vline(xintercept=ymd("2022-4-3"), linetype="dashed", 
              color = "red", size=1) +
-  ggplot2::annotate("text", x = ymd("2022-3-18"), y = 620, label = "Russian invasion of \n Ukraine") +
-  ggplot2::annotate("text", x = ymd("2022-4-19"), y = 190, label = "Elections/\nBucha massacre") +
+  ggplot2::annotate("text", x = ymd("2022-3-16"), y = 520, label = "Russian invasion of \n Ukraine") +
+  ggplot2::annotate("text", x = ymd("2022-4-22"), y = 430, label = "Elections/\nBucha massacre") +
   geom_curve(
     data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
     arrow = arrow(length = unit(0.08, "inch")), size = 0.5,
@@ -168,10 +168,15 @@ custom_stopwords <- HunMineR::data_stopwords_extra
 
 tidy_stops <- get_stopwords('hu')[,1]$word
 
+#adjust the regex in this code  stringr::str_remove_all(string = text, pattern = "[:digit:]")  to match all characters in the Unicode "Symbol" ⁠[S]⁠ class
+#stringr::str_remove_all(string = text, pattern = "[\\p{S}]")
+
 #create cleaner function
 cleaner <- function(text) {
   
   #remove punctuations, numbers, make it lower case, remove unnecessary white spaces
+  #text <- stringr::str_replace_all(string = text, "[^[^a-zA-Z0-9]]", "")
+  text <- stringr::str_remove_all(string = text, pattern = "[\\p{S}]")
   text <- stringr::str_remove_all(string = text, pattern = "[:punct:]") 
   text <- stringr::str_remove_all(string = text, pattern = "[:digit:]") 
   text <- stringr::str_to_lower(text)
@@ -182,7 +187,7 @@ cleaner <- function(text) {
   tokens <- unlist(strsplit(text, "\\s+"))
   tokens <- tokens[!(tokens %in% tidy_stops)]
   tokens <- tokens[!(tokens %in% custom_stopwords)]
-  tokens <- tokens[length(tokens) >= 3]
+  tokens <- tokens[nchar(tokens) >= 3]
   
   # get back processed text
   clean_text <- paste(tokens, collapse = " ")
@@ -282,13 +287,13 @@ df_tf_idf |>
   arrange(desc(tf_idf)) |>
   mutate(word = factor(word, levels = rev(unique(word)))) |> 
   group_by(label) |> 
-  top_n(10) #|> 
-  #ungroup #|>
-  #ggplot(aes(word, tf_idf, fill = label)) +
-  #geom_col(show.legend = FALSE) +
-  #labs(x = NULL, y = "tf-idf") +
-  #facet_wrap(~label, ncol = 2, scales = "free") +
-  #coord_flip()
+  top_n(8) |> 
+  ungroup |>
+  ggplot(aes(word, tf_idf, fill = label)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") +
+  facet_wrap(~label, ncol = 2, scales = "free") +
+  coord_flip()
 
 
 # keyness -----------------------------------------------------------------
@@ -297,7 +302,8 @@ df_tf_idf |>
 dfm_grouped <- corpus(df) |> 
   tokens( 
     remove_punct = TRUE, 
-    remove_numbers = TRUE 
+    remove_numbers = TRUE, 
+    remove_symbols = TRUE
   ) |> 
   tokens_tolower() |>  
   tokens_select(pattern = tidy_stops,selection = "remove" ) |> 
@@ -311,7 +317,7 @@ result_keyness <- dfm_grouped |>
 
 #plot
 result_keyness |> 
-  quanteda.textplots::textplot_keyness(color = c("#00BFC4", "#F8766D")) +
+  quanteda.textplots::textplot_keyness(color = c("#00BFC4", "#F8766D"), n=8) +
   xlim(c(-200, 200)) +
   theme(legend.position = c(0.9,0.1)) 
 
@@ -321,10 +327,10 @@ result_keyness |>
 #sentiment contribution
 
 #load and create sentiment dictionaries
-positive_words <- read_csv("../data/PrecoSenti/PrecoPos.csv") |>
+positive_words <- read_csv("./data/PrecoSenti/PrecoPos.csv") |>
   mutate(sentiment=1)
 
-negative_words <- read_csv("../data/PrecoSenti/PrecoNeg.csv") |>
+negative_words <- read_csv("./data/PrecoSenti/PrecoNeg.csv") |>
   mutate(sentiment=-1)
 
 hungarian_sentiment <- rbind(positive_words, negative_words)
@@ -375,27 +381,8 @@ ggplot(df_sent_time, aes(dates, score)) +
   geom_curve(
     data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
     arrow = arrow(length = unit(0.08, "inch")), size = 0.5,
-    color = "gray20", curvature = -0.3) +
-  theme_adam()
-
-#Hungarian version
-ggplot(df_sent_time, aes(dates, score)) +
-  geom_line() +
-  labs(
-    y = "Szentiment",
-    x = NULL
-  ) + 
-  geom_vline(xintercept=ymd("2022-2-24"), linetype="dashed", 
-             color = "red", size=1) + 
-  geom_vline(xintercept=ymd("2022-4-3"), linetype="dashed", 
-             color = "red", size=1) +
-  ggplot2::annotate("text", x = ymd("2022-2-1"), y = -60, label = "Oroszország megtámadja \n Ukrajnát") +
-  ggplot2::annotate("text", x = ymd("2022-4-23"), y = -90, label = "Választások/\nBucsai mészárlás") +
-  geom_curve(
-    data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
-    arrow = arrow(length = unit(0.08, "inch")), size = 0.5,
-    color = "gray20", curvature = -0.3) +
-  theme_adam()
+    color = "gray20", curvature = -0.3) #+
+  #theme_adam()
 
 # Topic modelling ---------------------------------------------------------
 
@@ -455,7 +442,7 @@ top_terms_gibbs %>%
     y = NULL
   ) +
   tidytext::scale_x_reordered() +
-  facet_wrap(~topic, scales = "free") + theme_adam()
+  facet_wrap(~topic, scales = "free") #+ theme_adam()
 
 #plot them for articles after the elections
 top_terms_gibbs %>%
@@ -470,7 +457,7 @@ top_terms_gibbs %>%
     y = NULL
   ) +
   tidytext::scale_x_reordered() +
-  facet_wrap(~topic, scales = "free") + theme_adam()
+  facet_wrap(~topic, scales = "free") #+ theme_adam()
 
 
 # Co-occurences -----------------------------------------------------------
@@ -494,5 +481,6 @@ title_word_pairs %>%
   geom_node_text(aes(label = name), repel = TRUE, 
                  point.padding = unit(0.2, "lines")) +
   theme_void()
+
 
 
