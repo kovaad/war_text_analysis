@@ -206,6 +206,7 @@ dfm <- corpus_df %>%
   tokens_remove(pattern = stopwords("hungarian")) %>% 
   tokens_select(pattern = custom_stopwords, selection = "remove") |> 
   #tokens_wordstem(language = "hungarian") %>% 
+  #filter out those that have less than 3 characters?
   dfm()
 
 #data cleaning and creating grouped dfm
