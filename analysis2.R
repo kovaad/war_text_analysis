@@ -15,7 +15,9 @@ devtools::install_github("poltextlab/HunMineR")
 if (!require("pacman")) {
   install.packages("pacman")
 }
-pacman::p_load(dplyr,tidyverse, quanteda, quanteda.textstats, ggrepel,text2vec, topicmodels,ggfortify, kableExtra,ggwordcloud, lubridate, tidytext )
+pacman::p_load(dplyr,tidyverse, quanteda, quanteda.textstats, 
+               ggrepel,text2vec, topicmodels,ggfortify, kableExtra,
+               ggwordcloud, lubridate, tidytext, pbapply)
 
 #check out custom theme
 source("theme_adam.R")
@@ -509,7 +511,7 @@ words_selected <- c("menekült", 'humanitárius', 'háború', 'zelenszkij','orb�
 embedding_plot(data = before_embedding_df, keywords = words_selected, breaks_x = seq(-8, 5, 2), breaks_y = seq(-8, 5, 2)) #+ theme_adam()
 
 #create embedding plot from after elections articles
-embedding_plot(data = after_embedding_df, keywords = words_selected, breaks_x = seq(-2, 8, 1), breaks_y = seq(-1, 1, 1))# + theme_adam()
+embedding_plot(data = after_embedding_df, keywords = words_selected, breaks_x = seq(-8, 8, 1), breaks_y = seq(-3, 1, 1))# + theme_adam()
 
 # topic modelling ---------------------------------------------------------
 
