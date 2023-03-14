@@ -15,7 +15,10 @@ devtools::install_github("poltextlab/HunMineR")
 if (!require("pacman")) {
   install.packages("pacman")
 }
-pacman::p_load(dplyr,tidyverse, stringr, lubridate, tidytext, HunMineR, quanteda,quanteda.textstats,quanteda.textplots, topicmodels, ggwordcloud, widyr, igraph, ggraph)
+pacman::p_load(dplyr,tidyverse, stringr, lubridate, 
+               tidytext, HunMineR, quanteda,quanteda.textstats,
+               quanteda.textplots, topicmodels, ggwordcloud, 
+               widyr, igraph, ggraph, pbapply)
 
 
 #check out custom theme
@@ -276,24 +279,24 @@ wc <- freq2 |>
 wc
 
 #create tf_idf doc
-df_tf_idf <- tokens  |> 
-  count(label, word) |>
-  filter(!str_detect(word, "\\d+")) |>
-  bind_tf_idf(word, label, n) |>
-  arrange(-tf_idf)
+#df_tf_idf <- tokens  |> 
+#  count(label, word) |>
+#  filter(!str_detect(word, "\\d+")) |>
+#  bind_tf_idf(word, label, n) |>
+#  arrange(-tf_idf)
 
 #visualize
-df_tf_idf |>    
-  arrange(desc(tf_idf)) |>
-  mutate(word = factor(word, levels = rev(unique(word)))) |> 
-  group_by(label) |> 
-  top_n(8) |> 
-  ungroup |>
-  ggplot(aes(word, tf_idf, fill = label)) +
-  geom_col(show.legend = FALSE) +
-  labs(x = NULL, y = "tf-idf") +
-  facet_wrap(~label, ncol = 2, scales = "free") +
-  coord_flip()
+#df_tf_idf |>    
+#  arrange(desc(tf_idf)) |>
+#  mutate(word = factor(word, levels = rev(unique(word)))) |> 
+#  group_by(label) |> 
+#  top_n(8) |> 
+#  ungroup |>
+#  ggplot(aes(word, tf_idf, fill = label)) +
+#  geom_col(show.legend = FALSE) +
+#  labs(x = NULL, y = "tf-idf") +
+#  facet_wrap(~label, ncol = 2, scales = "free") +
+#  coord_flip()
 
 
 # keyness -----------------------------------------------------------------
@@ -349,6 +352,9 @@ sent_tokens |>
   labs(y = "Contribution to sentiment", x = NULL) + 
   coord_flip()
 
+#todo
+#take out fél from negative words, as it means party, not fear
+
 #sentiment over time
 df_sent_time <- sent_tokens |> 
   group_by(dates) |> 
@@ -359,10 +365,10 @@ df_sent_time <- sent_tokens |>
 #helper tibble for arrows
 arrows <- 
   tibble(
-    x1 = c(ymd("2022-2-3"), ymd("2022-4-23")),
+    x1 = c(ymd("2022-3-5"), ymd("2022-4-23")),
     x2 =  c(ymd("2022-2-24"),ymd("2022-4-3")),
-    y1 = c(-50, -100), 
-    y2 = c(-50, -100)
+    y1 = c(-120, -100), 
+    y2 = c(-100, -100)
   )
 
 #plot
@@ -376,12 +382,12 @@ ggplot(df_sent_time, aes(dates, score)) +
              color = "red", size=1) + 
   geom_vline(xintercept=ymd("2022-4-3"), linetype="dashed", 
              color = "red", size=1) +
-  ggplot2::annotate("text", x = ymd("2022-2-1"), y = -60, label = "Russian invasion of \n Ukraine") +
-  ggplot2::annotate("text", x = ymd("2022-4-23"), y = -90, label = "Elections/\nBucha massacre") +
+  ggplot2::annotate("text", x = ymd("2022-3-15"), y = -130, label = "Russian invasion of \n Ukraine") +
+  ggplot2::annotate("text", x = ymd("2022-4-23"), y = -110, label = "Elections/\nBucha massacre") +
   geom_curve(
     data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
     arrow = arrow(length = unit(0.08, "inch")), size = 0.5,
-    color = "gray20", curvature = -0.3) #+
+    color = "gray20", curvature = 0.3) #+
   #theme_adam()
 
 # Topic modelling ---------------------------------------------------------
@@ -483,4 +489,22 @@ title_word_pairs %>%
   theme_void()
 
 
+# Tags -----------------------------------------------------------
 
+
+tag_tokens <- df %>% 
+  unnest_tokens(tag, tabs)
+
+tag_pairs <- tag_tokens %>% 
+  pairwise_count(tag, links, sort = TRUE, upper = FALSE)
+
+set.seed(1234)
+tag_pairs %>%
+  filter(n >= 25) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n, edge_width = n), edge_colour = "cyan4") +
+  geom_node_point(size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE, 
+                 point.padding = unit(0.2, "lines")) +
+  theme_void()
